@@ -3,7 +3,7 @@ import os, sys, optparse, logging, time, urllib2, json, urlparse, socket
 
 parser = optparse.OptionParser(
     usage='docker run meltwater/mesos-statsd:latest [options]...',
-    description='StatsD forwarder for Mesos metrics')
+    description='StatsD forwarder for Mesos master and slave metrics')
 
 def parsebool(value):
     truevals = set(['true', '1'])

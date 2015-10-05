@@ -1,5 +1,5 @@
 # Mesos StatsD forwarder
-Forwards Mesos master and slave metrics to a StatsD instance.
+StatsD forwarder for Mesos master and slave metrics.
 
 ## Environment Variables
 
