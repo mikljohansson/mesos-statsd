@@ -38,6 +38,9 @@ parser.add_option('-p', '--metrics-prefix', dest='prefix', help='Key prefix for 
 parser.add_option('-i', '--refresh-interval', dest='interval', help='Metrics update interval [default: %default]',
     type="int", default=parseint(os.environ.get('REFRESH_INTERVAL', '60')))
 
+parser.add_option('-x', '--max-packet-size', dest='maxpacketsize', help='Max UDP package size [default: %default]',
+    type="int", default=parseint(os.environ.get('MAX_PACKET_SIZE', '1386')))
+
 parser.add_option('-v', '--verbose', dest='verbose', help='Increase logging verbosity',
     action="store_true", default=parsebool(os.environ.get('VERBOSE', False)))
 
@@ -53,16 +56,33 @@ if not options.mesosurl:
     sys.exit(1)
 
 class StatsD(object):
-    def __init__(self, url):
+    def __init__(self, url, maxpacketsize):
         parsedurl = urlparse.urlparse(url)
         self._dest = (parsedurl.hostname or 'localhost', parsedurl.port or 8125)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._maxpacketsize = maxpacketsize
+        self._stats = ""
+
+    def _add_stat(self, key, value, mtype):
+        stat = '%s:%s|%s' % (key.replace('/', '.'), value, mtype)
+        if len(self._stats) > 0:
+            new_stats = self._stats + '\n' + stat
+        else:
+            new_stats = stat
+        if len(new_stats) > self._maxpacketsize:
+            self.flush()
+            self._stats = stat
+        else:
+            self._stats = new_stats
 
     def gauge(self, key, value):
-        self._send(key, value, 'g')
+        self._add_stat(key, value, 'g')
 
-    def _send(self, key, value, mtype):
-        self._socket.sendto('%s:%s|%s' % (key.replace('/', '.'), value, mtype), self._dest)
+    def flush(self):
+        if len(self._stats) > 0:
+            self._socket.sendto(self._stats, self._dest)
+            time.sleep(0.1) # Limits sending rate to reduce packet losses
+            self._stats = ""
 
 def forward(backend, key, value):
     if isinstance(value, dict):
@@ -73,7 +93,7 @@ def forward(backend, key, value):
 
 url = options.mesosurl + '/metrics/snapshot'
 mesos = urllib2.Request(url)
-backend = StatsD(options.statsdurl)
+backend = StatsD(options.statsdurl, options.maxpacketsize)
 
 while True:
     try:
@@ -81,6 +101,7 @@ while True:
         data = response.read()
         metrics = json.loads(data)
         forward(backend, options.prefix, metrics)
+        backend.flush()
     except (urllib2.URLError, urllib2.HTTPError), e:
         logging.exception("Failed to fetch metrics from '%s': %s", url, e.message)
 
