@@ -7,6 +7,7 @@ StatsD forwarder for Mesos master and slave metrics.
  * **STATSD_URL** - StatsD URL to forward metrics to, e.g. "statsd://localhost:8125"
  * **METRICS_PREFIX=mesos** - Key prefix for metrics. Defaults to 'mesos'.
  * **REFRESH_INTERVAL=60** - Metrics update interval. Defaults to 60 seconds.
+ * **MAX_PACKET_SIZE=1386** - Max UDP pack size. Defaults to 1386 bytes.
 
 ## Command Line Usage
 
@@ -27,6 +28,8 @@ Options:
                         Key prefix for metrics [default: mesos]
   -i INTERVAL, --refresh-interval=INTERVAL
                         Metrics update interval [default: 60]
+  -x MAX_PACKET_SIZE, --refresh-interval=MAX_PACKET_SIZE
+                        Max UDP packet size [default: 1386]
   -v, --verbose         Increase logging verbosity
 ```
 
